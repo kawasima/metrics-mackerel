@@ -10,7 +10,7 @@
 
     <groupId>net.unit8.metrics</groupId>
     <artifactId>metrics-mackerel</artifactId>
-    <version>0.1.0-SNAPSHOT</version>
+    <version>0.1.0</version>
 
     <name>Mackerel Integration for Metrics</name>
     <packaging>jar</packaging>
