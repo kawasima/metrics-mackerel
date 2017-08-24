@@ -226,7 +226,7 @@ public class MackerelReporter extends ScheduledReporter {
         if (o instanceof Float) {
             return ((Float) o).doubleValue();
         } else if (o instanceof Double) {
-            return ((Double) o).doubleValue();
+            return (Double) o;
         } else if (o instanceof Byte) {
             return ((Byte) o).doubleValue();
         } else if (o instanceof Short) {

@@ -54,9 +54,7 @@ public class MackerelServiceMetric implements Serializable {
 
         MackerelServiceMetric that = (MackerelServiceMetric) o;
 
-        if (time != that.time) return false;
-        if (name != null ? !name.equals(that.name) : that.name != null) return false;
-        return value != null ? value.equals(that.value) : that.value == null;
+        return time == that.time && (name != null ? name.equals(that.name) : that.name == null) && (value != null ? value.equals(that.value) : that.value == null);
     }
 
     @Override

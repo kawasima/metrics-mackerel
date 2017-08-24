@@ -16,7 +16,7 @@ public interface MackerelApiService {
      * @param serviceName    the name of the service
      * @param apiKey         the key of the api
      * @param serviceMetrics the list of metric objects
-     * @return
+     * @return Call object
      */
     @POST("/api/v0/services/{serviceName}/tsdb")
     Call<Map<String, String>> postServiceMetrics(

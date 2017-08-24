@@ -25,14 +25,6 @@ public class MackerelSender {
          this.serviceName = serviceName;
          this.apiKey = apiKey;
     }
-    /**
-     * Connects to the server.
-     *
-     * @throws IllegalStateException if the client is already connected
-     * @throws IOException if there is an error connecting
-     */
-    public void connect() throws IllegalStateException, IOException {
-    }
 
     /**
      * Sends the given measurement to the server.
@@ -40,17 +32,15 @@ public class MackerelSender {
      * @param name         the name of the metric
      * @param value        the value of the metric
      * @param timestamp    the timestamp of the metric
-     * @throws IOException if there was an error sending the metric
      */
-    public void send(String name, Double value, long timestamp)
-            throws IOException {
+    public void send(String name, Double value, long timestamp) {
         metrics.add(new MackerelServiceMetric(name, value, timestamp));
     }
 
     /**
      * Flushes buffer, if applicable
      *
-     * @throws IOException
+     * @throws IOException if Mackerel returns other than 200
      */
     void flush() throws IOException {
         Response response = apiService.postServiceMetrics(serviceName, apiKey, metrics).execute();
