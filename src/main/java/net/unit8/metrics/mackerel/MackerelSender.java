@@ -2,6 +2,7 @@ package net.unit8.metrics.mackerel;
 
 import net.jodah.failsafe.CircuitBreaker;
 import net.jodah.failsafe.Failsafe;
+import net.jodah.failsafe.function.CheckedRunnable;
 import retrofit2.Response;
 import retrofit2.Retrofit;
 import retrofit2.converter.jackson.JacksonConverterFactory;
@@ -77,17 +78,19 @@ public class MackerelSender {
     void flush() {
         try {
             Failsafe.with(circuitBreaker)
-                    .run(() -> {
-                        Response response = apiService.postServiceMetrics(
-                                serviceName,
-                                apiKey,
-                                userAgent,
-                                metrics).execute();
-                        if (response.code() != 200) {
-                            throw new IOException("Fail to send a Mackerel server.");
+                    .run(new CheckedRunnable() {
+                        @Override
+                        public void run() throws Exception {
+                            Response response = apiService.postServiceMetrics(
+                                    serviceName,
+                                    apiKey,
+                                    userAgent,
+                                    metrics).execute();
+                            if (response.code() != 200) {
+                                throw new IOException("Fail to send a Mackerel server.");
+                            }
                         }
                     });
-
         } finally {
             metrics.clear();
         }

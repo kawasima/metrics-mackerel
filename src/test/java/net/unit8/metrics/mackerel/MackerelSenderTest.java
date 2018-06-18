@@ -3,6 +3,9 @@ package net.unit8.metrics.mackerel;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.undertow.Undertow;
+import io.undertow.io.Receiver;
+import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 import org.junit.After;
 import org.junit.Before;
@@ -20,12 +23,18 @@ public class MackerelSenderTest {
     ObjectMapper mapper = new ObjectMapper();
     int port;
     int handleCount;
-    List<String> requestBodyList = new ArrayList<>();
+    List<String> requestBodyList = new ArrayList<String>();
 
     private int findPort() throws IOException {
-        try (ServerSocket socket = new ServerSocket(0)) {
+        ServerSocket socket = null;
+        try {
+            socket = new ServerSocket(0);
             socket.setReuseAddress(true);
             return socket.getLocalPort();
+        } finally {
+            if (socket != null && !socket.isClosed()) {
+                socket.close();
+            }
         }
     }
 
@@ -35,14 +44,20 @@ public class MackerelSenderTest {
         requestBodyList.clear();
         port = findPort();
         undertow = Undertow.builder()
-                .setHandler(exchange -> {
-                    handleCount += 1;
-                    exchange.getRequestReceiver().receiveFullString((e, data) -> {
-                        requestBodyList.add(data);
-                    });
-                    exchange.getResponseHeaders().add(Headers.CONTENT_TYPE, "text/plain");
-                    exchange.setStatusCode(500);
-                    exchange.getResponseSender().send("error");
+                .setHandler(new HttpHandler() {
+                    @Override
+                    public void handleRequest(HttpServerExchange exchange) throws Exception {
+                        handleCount += 1;
+                        exchange.getRequestReceiver().receiveFullString(new Receiver.FullStringCallback() {
+                            @Override
+                            public void handle(HttpServerExchange httpServerExchange, String data) {
+                                requestBodyList.add(data);
+                            }
+                        });
+                        exchange.getResponseHeaders().add(Headers.CONTENT_TYPE, "text/plain");
+                        exchange.setStatusCode(500);
+                        exchange.getResponseSender().send("error");
+                    }
                 })
                 .addHttpListener(port, "localhost")
                 .build();
@@ -72,7 +87,7 @@ public class MackerelSenderTest {
             sender.flush();
             fail("Exception must occur");
         } catch (Exception e) {
-            requestBodyList.forEach(body -> {
+            for (String body : requestBodyList) {
                 try {
                     List<MackerelServiceMetric> metric = mapper.readValue(body, new TypeReference<List<MackerelServiceMetric>>() {});
                     assertThat(metric).hasSize(1);
@@ -82,7 +97,7 @@ public class MackerelSenderTest {
                 } catch (Exception pe) {
                     fail("JSON parse error", pe);
                 }
-            });
+            }
             assert(handleCount == 3);
         }
     }
