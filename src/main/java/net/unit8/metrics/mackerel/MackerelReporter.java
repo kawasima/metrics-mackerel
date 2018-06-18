@@ -1,16 +1,14 @@
 package net.unit8.metrics.mackerel;
 
 import com.codahale.metrics.*;
+import com.codahale.metrics.Timer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.util.Collections;
-import java.util.Map;
-import java.util.Set;
-import java.util.SortedMap;
+import java.util.*;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
@@ -22,6 +20,7 @@ import static com.codahale.metrics.MetricAttribute.*;
  * @author kawasima
  */
 public class MackerelReporter extends ScheduledReporter {
+    private static final EnumSet ALLOWED_TIME_UNITS = EnumSet.of(TimeUnit.DAYS, TimeUnit.HOURS, TimeUnit.MINUTES);
 
     public static Builder forRegistry(MetricRegistry registry) {
         return new Builder(registry);
@@ -126,6 +125,14 @@ public class MackerelReporter extends ScheduledReporter {
         this.clock = clock;
         this.prefix = prefix;
     }
+
+    @Override
+    public synchronized void start(long initialDelay, long period, TimeUnit unit) {
+        if (!ALLOWED_TIME_UNITS.contains(unit))
+            throw new IllegalArgumentException("Can't set the this TimeUnit: " + unit);
+        super.start(initialDelay, period, unit);
+    }
+
     @Override
     public void report(SortedMap<String, Gauge> gauges,
                        SortedMap<String, Counter> counters,

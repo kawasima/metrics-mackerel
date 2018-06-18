@@ -1,5 +1,7 @@
 package net.unit8.metrics.mackerel;
 
+import net.jodah.failsafe.CircuitBreaker;
+import net.jodah.failsafe.Failsafe;
 import retrofit2.Response;
 import retrofit2.Retrofit;
 import retrofit2.converter.jackson.JacksonConverterFactory;
@@ -13,6 +15,8 @@ public class MackerelSender {
     private final List<MackerelServiceMetric> metrics;
     private final String serviceName;
     private final String apiKey;
+    private final CircuitBreaker circuitBreaker;
+    private String userAgent;
 
     public MackerelSender(String serviceName, String apiKey) {
         Retrofit retrofit = new Retrofit.Builder()
@@ -20,18 +24,27 @@ public class MackerelSender {
                 .addConverterFactory(JacksonConverterFactory.create())
                 .build();
 
-         apiService = retrofit.create(MackerelApiService.class);
-         metrics = new ArrayList<MackerelServiceMetric>();
-         this.serviceName = serviceName;
-         this.apiKey = apiKey;
+        circuitBreaker = new CircuitBreaker().failOn(IOException.class)
+                .withFailureThreshold(3)
+                .withSuccessThreshold(3);
+
+        apiService = retrofit.create(MackerelApiService.class);
+        metrics = new ArrayList<MackerelServiceMetric>();
+        userAgent = "metrics-mackerel-for-" + serviceName;
+        this.serviceName = serviceName;
+        this.apiKey = apiKey;
+    }
+
+    public void setUserAgent(String userAgent) {
+        this.userAgent = userAgent;
     }
 
     /**
      * Sends the given measurement to the server.
      *
-     * @param name         the name of the metric
-     * @param value        the value of the metric
-     * @param timestamp    the timestamp of the metric
+     * @param name      the name of the metric
+     * @param value     the value of the metric
+     * @param timestamp the timestamp of the metric
      */
     public void send(String name, Double value, long timestamp) {
         metrics.add(new MackerelServiceMetric(name, value, timestamp));
@@ -40,12 +53,22 @@ public class MackerelSender {
     /**
      * Flushes buffer, if applicable
      *
-     * @throws IOException if Mackerel returns other than 200
      */
-    void flush() throws IOException {
-        Response response = apiService.postServiceMetrics(serviceName, apiKey, metrics).execute();
-        if (response.code() != 200) {
-            throw new IOException("Fail to send a Mackerel server.");
+    void flush() {
+        try {
+            Failsafe.with(circuitBreaker)
+                    .run(() -> {
+                        Response response = apiService.postServiceMetrics(
+                                serviceName,
+                                apiKey,
+                                userAgent,
+                                metrics).execute();
+                        if (response.code() != 200) {
+                            throw new IOException("Fail to send a Mackerel server.");
+                        }
+                    });
+        } finally {
+            metrics.clear();
         }
     }
 }

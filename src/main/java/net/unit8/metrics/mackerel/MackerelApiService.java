@@ -22,5 +22,6 @@ public interface MackerelApiService {
     Call<Map<String, String>> postServiceMetrics(
             @Path("serviceName") String serviceName,
             @Header("X-Api-Key") String apiKey,
+            @Header("User-Agent") String userAgent,
             @Body List<MackerelServiceMetric> serviceMetrics);
 }
