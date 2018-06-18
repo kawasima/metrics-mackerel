@@ -40,7 +40,7 @@ public class MackerelConfig {
         final MackerelReporter reporter = MackerelReporter
                 .forRegistry(registry)
                 .build(sender);
-        reporter.start(1, TimeUnit.MINUTES);
+        reporter.start(5, TimeUnit.MINUTES);
     }
 
     public void setApiKey(String apiKey) {
