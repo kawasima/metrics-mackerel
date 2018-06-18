@@ -9,7 +9,6 @@ import retrofit2.converter.jackson.JacksonConverterFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
@@ -43,7 +42,14 @@ public class MackerelSender {
                     + props.getProperty("version")
                     + " (for " + serviceName + ")";
         } catch (IOException e) {
-            throw new UncheckedIOException(e);
+            throw new IllegalStateException(e);
+        } finally {
+            if (resourceAsStream != null) {
+                try {
+                    resourceAsStream.close();
+                } catch(IOException ignore) {
+                }
+            }
         }
         circuitBreaker = new CircuitBreaker()
                 .withFailureThreshold(3)
