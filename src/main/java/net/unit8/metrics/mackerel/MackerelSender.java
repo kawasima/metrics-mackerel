@@ -7,10 +7,15 @@ import retrofit2.Retrofit;
 import retrofit2.converter.jackson.JacksonConverterFactory;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
+import java.util.concurrent.TimeUnit;
 
 public class MackerelSender {
+    private static final String DEFAULT_BASE_URL = "https://api.mackerelio.com";
     private final MackerelApiService apiService;
     private final List<MackerelServiceMetric> metrics;
     private final String serviceName;
@@ -19,18 +24,33 @@ public class MackerelSender {
     private String userAgent;
 
     public MackerelSender(String serviceName, String apiKey) {
+        this(serviceName, apiKey, DEFAULT_BASE_URL);
+    }
+
+    public MackerelSender(String serviceName, String apiKey, String baseUrl) {
         Retrofit retrofit = new Retrofit.Builder()
-                .baseUrl("https://mackerel.io")
+                .baseUrl(baseUrl)
                 .addConverterFactory(JacksonConverterFactory.create())
                 .build();
 
-        circuitBreaker = new CircuitBreaker().failOn(IOException.class)
+        InputStream resourceAsStream = this.getClass()
+                .getResourceAsStream("/version.properties");
+        Properties props = new Properties();
+        try {
+            props.load(resourceAsStream);
+            userAgent = "metrics-mackerel/"
+                    + props.getProperty("version")
+                    + " (for " + serviceName + ")";
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+        circuitBreaker = new CircuitBreaker()
                 .withFailureThreshold(3)
+                .withDelay(15, TimeUnit.MINUTES)
                 .withSuccessThreshold(3);
 
         apiService = retrofit.create(MackerelApiService.class);
         metrics = new ArrayList<MackerelServiceMetric>();
-        userAgent = "metrics-mackerel-for-" + serviceName;
         this.serviceName = serviceName;
         this.apiKey = apiKey;
     }
@@ -67,6 +87,7 @@ public class MackerelSender {
                             throw new IOException("Fail to send a Mackerel server.");
                         }
                     });
+
         } finally {
             metrics.clear();
         }

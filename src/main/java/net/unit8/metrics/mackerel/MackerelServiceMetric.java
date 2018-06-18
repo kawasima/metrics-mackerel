@@ -1,5 +1,8 @@
 package net.unit8.metrics.mackerel;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.io.Serializable;
 
 public class MackerelServiceMetric implements Serializable {
@@ -7,8 +10,11 @@ public class MackerelServiceMetric implements Serializable {
     private long time;
     private Double value;
 
-
-    public MackerelServiceMetric(String name, Double value, long time) {
+    @JsonCreator
+    public MackerelServiceMetric(
+            @JsonProperty("name")  String name,
+            @JsonProperty("value") Double value,
+            @JsonProperty("time")  long time) {
         this.name = name;
         this.value = value;
         this.time = time;
